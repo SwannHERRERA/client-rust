@@ -1,0 +1,100 @@
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+name: CI
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [ 'RUST_PROTOBUF=0', 'RUST_PROTOBUF=1' ]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - run: rustup component add rustfmt clippy
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          version: '3.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v1.4.0
+        with:
+          key: ${{ matrix.env }}
+      - name: make check
+        run: ${{ matrix.env }} make check
+
+  unit-test:
+    name: unit test
+    env:
+      CARGO_INCREMENTAL: 0
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [ 'RUST_PROTOBUF=0', 'RUST_PROTOBUF=1' ]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          version: '3.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v1.4.0
+        with:
+          key: ${{ matrix.env }}
+      - name: unit test
+        run: ${{ matrix.env }} make unit-test
+
+  integration-test:
+    name: integration test
+    env:
+      CARGO_INCREMENTAL: 0
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [ 'RUST_PROTOBUF=0', 'RUST_PROTOBUF=1' ]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          version: '3.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v1.4.0
+        with:
+          key: ${{ matrix.env }}
+      - name: install tiup
+        run: curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
+      - name: start tiup playground
+        run: |
+          # use latest stable version
+          ~/.tiup/bin/tiup install tikv pd
+          ~/.tiup/bin/tiup playground --mode tikv-slim --kv 3 --without-monitor --kv.config config/tikv.toml --pd.config config/pd.toml &
+          while :; do
+            echo "waiting cluster to be ready"
+            [[ "$(curl -I http://127.0.0.1:2379/pd/api/v1/regions 2>/dev/null | head -n 1 | cut -d$' ' -f2)" -ne "405" ]] || break
+            sleep 1
+          done
+      - name: integration test
+        run: ${{ matrix.env }} MULTI_REGION=1 make integration-test

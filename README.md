@@ -3,11 +3,9 @@
 [![Docs](https://docs.rs/tikv-client/badge.svg)](https://docs.rs/tikv-client)
 [![Build Status](https://travis-ci.org/tikv/client-rust.svg?branch=master)](https://travis-ci.org/tikv/client-rust)
 
-[Nightly docs](https://www.tikv.dev/doc/rust-client/tikv_client/)
-
 This crate provides an easy-to-use client for [TiKV](https://github.com/tikv/tikv), a distributed, transactional key-value database written in Rust.
 
-This crate lets you connect to a TiKV cluster and use either a transactional or raw (simple get/put style without transactional consistency guarantees) API to access and update your data.
+This crate lets you connect to a TiKV(>= `v5.0.0`) cluster and use either a transactional or raw (simple get/put style without transactional consistency guarantees) API to access and update your data.
 
 The TiKV Rust client is an open source (Apache 2) project maintained by the TiKV Authors. We welcome contributions, see below for more info.
 
@@ -19,10 +17,13 @@ The TiKV client is a Rust library (crate). To use this crate in your project, ad
 
 ```toml
 [dependencies]
-tikv-client = "0.1.0"
+tikv-client = "0.2.0"
 ```
 
-The minimum supported version of Rust is 1.40. The minimum supported version of TiKV is 5.0.
+### Prerequisites
+- [`cmake`](https://cmake.org/) >= `3.12.0`, required for [`building gRPC in parallel`](https://cmake.org/cmake/help/latest/envvar/CMAKE_BUILD_PARALLEL_LEVEL.html)
+- [`gcc`](https://gcc.gnu.org/) >= `6.3.0`, required for [`building gRPC`](https://github.com/grpc/grpc/tree/master/src/cpp)
+- [`rust`](https://www.rust-lang.org/) >= `1.56.1`, required for `hashbrown-v0.12.1`
 
 The general flow of using the client crate is to create either a raw or transaction client object (which can be configured) then send commands using the client object, or use it to create transactions objects. In the latter case, the transaction is built up using various commands and then committed (or rolled back).
 
@@ -33,7 +34,7 @@ Raw mode:
 ```rust
 use tikv_client::RawClient;
 
-let client = RawClient::new(vec!["127.0.0.1:2379"]).await?;
+let client = RawClient::new(vec!["127.0.0.1:2379"], None).await?;
 client.put("key".to_owned(), "value".to_owned()).await?;
 let value = client.get("key".to_owned()).await?;
 ```
@@ -43,7 +44,7 @@ Transactional mode:
 ```rust
 use tikv_client::TransactionClient;
 
-let txn_client = TransactionClient::new(vec!["127.0.0.1:2379"]).await?;
+let txn_client = TransactionClient::new(vec!["127.0.0.1:2379"], None).await?;
 let mut txn = txn_client.begin_optimistic().await?;
 txn.put("key".to_owned(), "value".to_owned()).await?;
 let value = txn.get("key".to_owned()).await?;
@@ -115,10 +116,10 @@ We welcome your contributions! Contributing code is great, we also appreciate fi
 
 We use the standard Cargo workflows, e.g., `cargo build` to build and `cargo test` to run unit tests. You will need to use a nightly Rust toolchain to build and run tests.
 
-Running integration tests or manually testing the client with a TiKV cluster is a little bit more involved. The easiest way is to use [TiUp](https://github.com/pingcap/tiup) to initialise a cluster on your local machine:
+Running integration tests or manually testing the client with a TiKV cluster is a little bit more involved. The easiest way is to use [TiUp](https://github.com/pingcap/tiup) (>= 1.5) to initialise a cluster on your local machine:
 
 ```
-tiup playground nightly --db 0 --tiflash 0 --monitor false
+tiup playground nightly --mode tikv-slim
 ```
 
 Then if you want to run integration tests:
@@ -137,6 +138,8 @@ Please follow PingCAP's  [Rust style guide](https://pingcap.github.io/style-guid
 
 ## Getting help
 
-If you need help, either to find something to work on, or with any technical problem, the easiest way to get it is via Slack. We monitor the client-rust (better for general client questions) and sig-transaction (better for technical questions about TiKV's transaction protocol) channels on the [tikv-wg slack](https://tikv.org/chat).
+If you need help, either to find something to work on, or with any technical problem, the easiest way to get it is via internals.tidb.io, the forum for TiDB developers. 
 
-You can also get help on GitHub issues or PRs directly. You can just ask a question; if you don't get a response, you should ping @nrc or @ekexium.
+You can also ask in Slack. We monitor the #client-rust channel on the [tikv-wg slack](https://tikv.org/chat).
+
+You can just ask a question on GitHub issues or PRs directly; if you don't get a response, you should ping @ekexium or @andylokandy.

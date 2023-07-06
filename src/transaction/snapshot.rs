@@ -2,8 +2,7 @@
 
 use crate::{BoundRange, Key, KvPair, Result, Transaction, Value};
 use derive_new::new;
-use futures::stream::BoxStream;
-use std::ops::RangeBounds;
+use slog::Logger;
 
 /// A read-only transaction which reads at the given timestamp.
 ///
@@ -15,16 +14,19 @@ use std::ops::RangeBounds;
 #[derive(new)]
 pub struct Snapshot {
     transaction: Transaction,
+    logger: Logger,
 }
 
 impl Snapshot {
     /// Get the value associated with the given key.
     pub async fn get(&mut self, key: impl Into<Key>) -> Result<Option<Value>> {
+        debug!(self.logger, "invoking get request on snapshot");
         self.transaction.get(key).await
     }
 
     /// Check whether the key exists.
     pub async fn key_exists(&mut self, key: impl Into<Key>) -> Result<bool> {
+        debug!(self.logger, "invoking key_exists request on snapshot");
         self.transaction.key_exists(key).await
     }
 
@@ -33,6 +35,7 @@ impl Snapshot {
         &mut self,
         keys: impl IntoIterator<Item = impl Into<Key>>,
     ) -> Result<impl Iterator<Item = KvPair>> {
+        debug!(self.logger, "invoking batch_get request on snapshot");
         self.transaction.batch_get(keys).await
     }
 
@@ -42,6 +45,7 @@ impl Snapshot {
         range: impl Into<BoundRange>,
         limit: u32,
     ) -> Result<impl Iterator<Item = KvPair>> {
+        debug!(self.logger, "invoking scan request on snapshot");
         self.transaction.scan(range, limit).await
     }
 
@@ -51,12 +55,30 @@ impl Snapshot {
         range: impl Into<BoundRange>,
         limit: u32,
     ) -> Result<impl Iterator<Item = Key>> {
+        debug!(self.logger, "invoking scan_keys request on snapshot");
         self.transaction.scan_keys(range, limit).await
     }
 
-    /// Unimplemented. Similar to scan, but in the reverse direction.
-    #[allow(dead_code)]
-    fn scan_reverse(&mut self, range: impl RangeBounds<Key>) -> BoxStream<Result<KvPair>> {
-        self.transaction.scan_reverse(range)
+    /// Similar to scan, but in the reverse direction.
+    pub async fn scan_reverse(
+        &mut self,
+        range: impl Into<BoundRange>,
+        limit: u32,
+    ) -> Result<impl Iterator<Item = KvPair>> {
+        debug!(self.logger, "invoking scan_reverse request on snapshot");
+        self.transaction.scan_reverse(range, limit).await
+    }
+
+    /// Similar to scan_keys, but in the reverse direction.
+    pub async fn scan_keys_reverse(
+        &mut self,
+        range: impl Into<BoundRange>,
+        limit: u32,
+    ) -> Result<impl Iterator<Item = Key>> {
+        debug!(
+            self.logger,
+            "invoking scan_keys_reverse request on snapshot"
+        );
+        self.transaction.scan_keys_reverse(range, limit).await
     }
 }

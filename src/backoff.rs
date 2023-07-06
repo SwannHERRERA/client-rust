@@ -7,7 +7,7 @@ use std::time::Duration;
 
 pub const DEFAULT_REGION_BACKOFF: Backoff = Backoff::no_jitter_backoff(2, 500, 10);
 pub const OPTIMISTIC_BACKOFF: Backoff = Backoff::no_jitter_backoff(2, 500, 10);
-pub const PESSIMISTIC_BACKOFF: Backoff = Backoff::no_backoff();
+pub const PESSIMISTIC_BACKOFF: Backoff = Backoff::no_jitter_backoff(2, 500, 10);
 
 /// When a request is retried, we can backoff for some time to avoid saturating the network.
 ///
@@ -74,6 +74,11 @@ impl Backoff {
     /// True if we should not backoff at all (usually indicates that we should not retry a request).
     pub fn is_none(&self) -> bool {
         self.kind == BackoffKind::None
+    }
+
+    /// Returns the number of attempts
+    pub fn current_attempts(&self) -> u32 {
+        self.current_attempts
     }
 
     /// Don't wait. Usually indicates that we should not retry a request.

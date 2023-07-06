@@ -33,6 +33,10 @@ pub enum Error {
         "The operation is not supported in current mode, please consider using RawClient with or without atomic mode"
     )]
     UnsupportedMode,
+    #[error("There is no current_regions in the EpochNotMatch error")]
+    NoCurrentRegions,
+    #[error("The specified entry is not found in the region cache")]
+    EntryNotFoundInRegionCache,
     /// Wraps a `std::io::Error`.
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -44,31 +48,39 @@ pub enum Error {
     Canceled(#[from] futures::channel::oneshot::Canceled),
     /// Errors caused by changes of region information
     #[error("Region error: {0:?}")]
-    RegionError(tikv_client_proto::errorpb::Error),
+    RegionError(Box<tikv_client_proto::errorpb::Error>),
     /// Whether the transaction is committed or not is undetermined
     #[error("Whether the transaction is committed or not is undetermined")]
     UndeterminedError(Box<Error>),
     /// Wraps `tikv_client_proto::kvrpcpb::KeyError`
     #[error("{0:?}")]
-    KeyError(tikv_client_proto::kvrpcpb::KeyError),
-    /// Multiple errors
+    KeyError(Box<tikv_client_proto::kvrpcpb::KeyError>),
+    /// Multiple errors generated from the ExtractError plan.
     #[error("Multiple errors: {0:?}")]
-    MultipleErrors(Vec<Error>),
+    ExtractedErrors(Vec<Error>),
+    /// Multiple key errors
+    #[error("Multiple key errors: {0:?}")]
+    MultipleKeyErrors(Vec<Error>),
     /// Invalid ColumnFamily
     #[error("Unsupported column family {}", _0)]
     ColumnFamilyError(String),
+    /// Can't join tokio tasks
+    #[error("Failed to join tokio tasks")]
+    JoinError(#[from] tokio::task::JoinError),
     /// No region is found for the given key.
     #[error("Region is not found for key: {:?}", key)]
     RegionForKeyNotFound { key: Vec<u8> },
-    /// No region is found for the given id.
-    #[error("Region {} is not found", region_id)]
-    RegionNotFound { region_id: u64 },
+    /// No region is found for the given id. note: distinguish it with the RegionNotFound error in errorpb.
+    #[error("Region {} is not found in the response", region_id)]
+    RegionNotFoundInResponse { region_id: u64 },
     /// No leader is found for the given id.
     #[error("Leader of region {} is not found", region_id)]
     LeaderNotFound { region_id: u64 },
     /// Scan limit exceeds the maximum
     #[error("Limit {} exceeds max scan limit {}", limit, max_limit)]
     MaxScanLimitExceeded { limit: u32, max_limit: u32 },
+    #[error("Invalid Semver string: {0:?}")]
+    InvalidSemver(#[from] semver::Error),
     /// A string error returned by TiKV server
     #[error("Kv error. {}", message)]
     KvError { message: String },
@@ -76,17 +88,22 @@ pub enum Error {
     InternalError { message: String },
     #[error("{0}")]
     StringError(String),
+    #[error("PessimisticLock error: {:?}", inner)]
+    PessimisticLockError {
+        inner: Box<Error>,
+        success_keys: Vec<Vec<u8>>,
+    },
 }
 
 impl From<tikv_client_proto::errorpb::Error> for Error {
     fn from(e: tikv_client_proto::errorpb::Error) -> Error {
-        Error::RegionError(e)
+        Error::RegionError(Box::new(e))
     }
 }
 
 impl From<tikv_client_proto::kvrpcpb::KeyError> for Error {
     fn from(e: tikv_client_proto::kvrpcpb::KeyError) -> Error {
-        Error::KeyError(e)
+        Error::KeyError(Box::new(e))
     }
 }
 

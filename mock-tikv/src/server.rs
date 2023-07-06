@@ -1,11 +1,13 @@
 // Copyright 2020 TiKV Project Authors. Licensed under Apache-2.0.
 
+#![allow(clippy::useless_conversion)] // To support both prost & rust-protobuf.
+
 use crate::{spawn_unary_success, KvStore};
 use derive_new::new;
 use futures::{FutureExt, TryFutureExt};
 use grpcio::{Environment, Server, ServerBuilder};
 use std::sync::Arc;
-use tikv_client_proto::{coprocessor_v2::*, kvrpcpb::*, tikvpb::*};
+use tikv_client_proto::{kvrpcpb::*, tikvpb::*};
 
 pub const MOCK_TIKV_PORT: u16 = 50019;
 
@@ -192,7 +194,7 @@ impl Tikv for MockTikv {
         sink: grpcio::UnarySink<tikv_client_proto::kvrpcpb::RawBatchGetResponse>,
     ) {
         let mut resp = tikv_client_proto::kvrpcpb::RawBatchGetResponse::default();
-        resp.set_pairs(self.inner.raw_batch_get(req.take_keys()));
+        resp.set_pairs(self.inner.raw_batch_get(req.take_keys().into()).into());
         spawn_unary_success!(ctx, req, resp, sink);
     }
 
@@ -214,7 +216,7 @@ impl Tikv for MockTikv {
         mut req: tikv_client_proto::kvrpcpb::RawBatchPutRequest,
         sink: grpcio::UnarySink<tikv_client_proto::kvrpcpb::RawBatchPutResponse>,
     ) {
-        let pairs = req.take_pairs();
+        let pairs = req.take_pairs().into();
         self.inner.raw_batch_put(pairs);
         let resp = RawBatchPutResponse::default();
         spawn_unary_success!(ctx, req, resp, sink);
@@ -238,7 +240,7 @@ impl Tikv for MockTikv {
         mut req: tikv_client_proto::kvrpcpb::RawBatchDeleteRequest,
         sink: grpcio::UnarySink<tikv_client_proto::kvrpcpb::RawBatchDeleteResponse>,
     ) {
-        let keys = req.take_keys();
+        let keys = req.take_keys().into();
         self.inner.raw_batch_delete(keys);
         let resp = RawBatchDeleteResponse::default();
         spawn_unary_success!(ctx, req, resp, sink);
@@ -267,60 +269,6 @@ impl Tikv for MockTikv {
         _ctx: grpcio::RpcContext,
         _req: tikv_client_proto::kvrpcpb::RawBatchScanRequest,
         _sink: grpcio::UnarySink<tikv_client_proto::kvrpcpb::RawBatchScanResponse>,
-    ) {
-        todo!()
-    }
-
-    fn ver_get(
-        &mut self,
-        _ctx: grpcio::RpcContext,
-        _req: tikv_client_proto::kvrpcpb::VerGetRequest,
-        _sink: grpcio::UnarySink<tikv_client_proto::kvrpcpb::VerGetResponse>,
-    ) {
-        todo!()
-    }
-
-    fn ver_batch_get(
-        &mut self,
-        _ctx: grpcio::RpcContext,
-        _req: tikv_client_proto::kvrpcpb::VerBatchGetRequest,
-        _sink: grpcio::UnarySink<tikv_client_proto::kvrpcpb::VerBatchGetResponse>,
-    ) {
-        todo!()
-    }
-
-    fn ver_mut(
-        &mut self,
-        _ctx: grpcio::RpcContext,
-        _req: tikv_client_proto::kvrpcpb::VerMutRequest,
-        _sink: grpcio::UnarySink<tikv_client_proto::kvrpcpb::VerMutResponse>,
-    ) {
-        todo!()
-    }
-
-    fn ver_batch_mut(
-        &mut self,
-        _ctx: grpcio::RpcContext,
-        _req: tikv_client_proto::kvrpcpb::VerBatchMutRequest,
-        _sink: grpcio::UnarySink<tikv_client_proto::kvrpcpb::VerBatchMutResponse>,
-    ) {
-        todo!()
-    }
-
-    fn ver_scan(
-        &mut self,
-        _ctx: grpcio::RpcContext,
-        _req: tikv_client_proto::kvrpcpb::VerScanRequest,
-        _sink: grpcio::UnarySink<tikv_client_proto::kvrpcpb::VerScanResponse>,
-    ) {
-        todo!()
-    }
-
-    fn ver_delete_range(
-        &mut self,
-        _ctx: grpcio::RpcContext,
-        _req: tikv_client_proto::kvrpcpb::VerDeleteRangeRequest,
-        _sink: grpcio::UnarySink<tikv_client_proto::kvrpcpb::VerDeleteRangeResponse>,
     ) {
         todo!()
     }
@@ -532,7 +480,7 @@ impl Tikv for MockTikv {
         todo!()
     }
 
-    fn coprocessor_v2(
+    fn raw_coprocessor(
         &mut self,
         _: grpcio::RpcContext,
         _: RawCoprocessorRequest,
@@ -546,6 +494,15 @@ impl Tikv for MockTikv {
         _: grpcio::RpcContext,
         _: StoreSafeTsRequest,
         _: grpcio::UnarySink<StoreSafeTsResponse>,
+    ) {
+        todo!()
+    }
+
+    fn get_lock_wait_info(
+        &mut self,
+        _: grpcio::RpcContext,
+        _: GetLockWaitInfoRequest,
+        _: grpcio::UnarySink<GetLockWaitInfoResponse>,
     ) {
         todo!()
     }

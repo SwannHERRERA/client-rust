@@ -10,8 +10,6 @@ tokio = { version = "1.5", features = ["full"] }
 
 Note that you need to use Tokio. The TiKV client has an async API and therefore you need an async runtime in your program to use it. At the moment, Tokio is used internally in the client and so you must use Tokio in your code too. We plan to become more flexible in future versions.
 
-The minimum supported version of Rust is 1.40. The minimum supported version of TiKV is 5.0.
-
 The general flow of using the client crate is to create either a raw or transaction client object (which can be configured) then send commands using the client object, or use it to create transactions objects. In the latter case, the transaction is built up using various commands and then committed (or rolled back).
 
 ## Examples
@@ -23,7 +21,7 @@ Raw mode:
 ```rust
 use tikv_client::RawClient;
 
-let client = RawClient::new(vec!["127.0.0.1:2379"]).await?;
+let client = RawClient::new(vec!["127.0.0.1:2379"], None).await?;
 client.put("key".to_owned(), "value".to_owned()).await?;
 let value = client.get("key".to_owned()).await?;
 ```
@@ -33,7 +31,7 @@ Transactional mode:
 ```rust
 use tikv_client::TransactionClient;
 
-let txn_client = TransactionClient::new(vec!["127.0.0.1:2379"]).await?;
+let txn_client = TransactionClient::new(vec!["127.0.0.1:2379"], None).await?;
 let mut txn = txn_client.begin_optimistic().await?;
 txn.put("key".to_owned(), "value".to_owned()).await?;
 let value = txn.get("key".to_owned()).await?;
@@ -46,7 +44,7 @@ To make an example which builds and runs,
 use tikv_client::{TransactionClient, Error};
 
 async fn run() -> Result<(), Error> {
-    let txn_client = TransactionClient::new(vec!["127.0.0.1:2379"]).await?;
+    let txn_client = TransactionClient::new(vec!["127.0.0.1:2379"], None).await?;
     let mut txn = txn_client.begin_optimistic().await?;
     txn.put("key".to_owned(), "value".to_owned()).await?;
     let value = txn.get("key".to_owned()).await?;
@@ -79,7 +77,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh
 then, to start a local TiKV 'cluster' for testing,
 
 ```
-tiup playground nightly --kv-only
+tiup playground nightly --mode tikv-slim
 ```
 
 For more information about TiUP, see their [docs](https://docs.pingcap.com/tidb/stable/production-deployment-using-tiup).

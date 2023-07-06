@@ -39,7 +39,7 @@ macro_rules! impl_request {
             }
 
             fn set_context(&mut self, context: kvrpcpb::Context) {
-                self.set_context(context);
+                kvrpcpb::$name::set_context(self, context)
             }
         }
     };
@@ -70,6 +70,11 @@ impl_request!(
     RawCasRequest,
     raw_compare_and_swap_async_opt,
     "raw_compare_and_swap"
+);
+impl_request!(
+    RawCoprocessorRequest,
+    raw_coprocessor_async_opt,
+    "raw_coprocessor"
 );
 
 impl_request!(GetRequest, kv_get_async_opt, "kv_get");

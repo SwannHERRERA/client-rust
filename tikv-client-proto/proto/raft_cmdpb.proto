@@ -172,6 +172,7 @@ message CompactLogResponse {}
 
 message TransferLeaderRequest {
     metapb.Peer peer = 1;
+    repeated metapb.Peer peers = 2;
 }
 
 message TransferLeaderResponse {}
@@ -316,6 +317,7 @@ message RaftRequestHeader {
 
     // Custom flags for this raft request.
     uint64 flags = 10;
+    bytes flag_data = 11;
 }
 
 message RaftResponseHeader {
