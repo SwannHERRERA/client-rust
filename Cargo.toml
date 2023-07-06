@@ -13,7 +13,6 @@ default = [ "prost-codec", "prometheus/process" ]
 # Enable integration tests with a running TiKV and PD instance.
 # Use $PD_ADDRS, comma separated, to set the addresses the tests use.
 integration-tests = []
-use_proetheus_process = ["proetheus/process"]
 protobuf-codec = [
     "grpcio/protobuf-codec",
     "tikv-client-proto/protobuf-codec",
